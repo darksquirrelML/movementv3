@@ -9,6 +9,19 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 
+
+DATABASE_URL = st.secrets["SUPABASE_DB_URL"]
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    connect_args={"sslmode": "require"}
+)
+
+
+
+
+
 # -------------------------
 # Get SQLAlchemy engine from Supabase URL
 # -------------------------
@@ -60,13 +73,5 @@ def seed_from_excel(table_type: str, excel_file: str):
     df = pd.read_excel(excel_file)
     save_table(df, table_type)
 
-from sqlalchemy import text
-
-with engine.connect() as conn:
-    conn.execute(text("SELECT 1"))
 
     
-from sqlalchemy import text
-
-with engine.connect() as conn:
-    conn.execute(text("SELECT 1"))
