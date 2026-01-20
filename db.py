@@ -15,11 +15,13 @@ DATABASE_URL = st.secrets["SUPABASE_DB_URL"]
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10
 )
 
 # -------------------------------------------------
-# Initialise tables (run once, safe to call always)
+# Initialise tables (safe to call always)
 # -------------------------------------------------
 def init_db():
     with engine.begin() as conn:
@@ -66,13 +68,12 @@ def init_db():
 # -------------------------------------------------
 def load_table(table_name: str) -> pd.DataFrame:
     init_db()
-    query = f"SELECT * FROM {table_name}"
-    return pd.read_sql(query, engine)
+    return pd.read_sql(f"SELECT * FROM {table_name}", engine)
 
 # -------------------------------------------------
-# Save DataFrame back to table (replace mode)
+# Replace table (ADMIN / Excel upload only)
 # -------------------------------------------------
-def save_table(df: pd.DataFrame, table_name: str):
+def replace_table(df: pd.DataFrame, table_name: str):
     df.to_sql(
         table_name,
         engine,
@@ -81,7 +82,15 @@ def save_table(df: pd.DataFrame, table_name: str):
     )
 
 # -------------------------------------------------
-# Append rows (optional, safer for logs)
+# Update table safely (normal operations)
+# -------------------------------------------------
+def save_table(df: pd.DataFrame, table_name: str):
+    with engine.begin() as conn:
+        conn.execute(text(f"DELETE FROM {table_name}"))
+        df.to_sql(table_name, conn, if_exists="append", index=False)
+
+# -------------------------------------------------
+# Append rows (logs / GPS history)
 # -------------------------------------------------
 def append_table(df: pd.DataFrame, table_name: str):
     df.to_sql(
@@ -92,7 +101,7 @@ def append_table(df: pd.DataFrame, table_name: str):
     )
 
 # -------------------------------------------------
-# Simple connection test (optional)
+# Connection test
 # -------------------------------------------------
 def test_connection():
     with engine.connect() as conn:
