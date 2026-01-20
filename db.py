@@ -60,3 +60,13 @@ def seed_from_excel(table_type: str, excel_file: str):
     df = pd.read_excel(excel_file)
     save_table(df, table_type)
 
+from sqlalchemy import text
+
+with engine.connect() as conn:
+    conn.execute(text("SELECT 1"))
+
+    
+from sqlalchemy import text
+
+with engine.connect() as conn:
+    conn.execute(text("SELECT 1"))
