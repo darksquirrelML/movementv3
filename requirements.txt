@@ -2,3 +2,5 @@ streamlit
 pandas
 openpyxl
 pytz
+sqlalchemy
+psycopg2-binary
