@@ -4,74 +4,97 @@
 # In[ ]:
 
 
-# db.py
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
-
+# -------------------------------------------------
+# Database connection (Supabase Session Pooler)
+# -------------------------------------------------
 DATABASE_URL = st.secrets["SUPABASE_DB_URL"]
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args={"sslmode": "require"}
+    pool_pre_ping=True
 )
 
+# -------------------------------------------------
+# Initialise tables (run once, safe to call always)
+# -------------------------------------------------
+def init_db():
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS pickup (
+                truck_id TEXT,
+                plate_no TEXT,
+                driver TEXT,
+                time_start TEXT,
+                time_end TEXT,
+                current_location TEXT,
+                status TEXT,
+                remarks TEXT,
+                last_updated TEXT
+            )
+        """))
 
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tipper (
+                truck_id TEXT,
+                plate_no TEXT,
+                driver TEXT,
+                current_location TEXT,
+                status TEXT,
+                remarks TEXT,
+                last_updated TEXT
+            )
+        """))
 
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS machinery (
+                machine_id TEXT,
+                machine_name TEXT,
+                operator TEXT,
+                current_location TEXT,
+                status TEXT,
+                remarks TEXT,
+                last_updated TEXT
+            )
+        """))
 
-
-# -------------------------
-# Get SQLAlchemy engine from Supabase URL
-# -------------------------
-@st.cache_resource
-def get_engine():
-    engine = create_engine(st.secrets["SUPABASE_DB_URL"])
-    return engine
-
-engine = get_engine()
-
-# -------------------------
-# Table names
-# -------------------------
-TABLES = {
-    "pickup": "pickup_schedule",
-    "tipper": "tipper_schedule",
-    "machinery": "machinery_schedule"
-}
-
-# -------------------------
+# -------------------------------------------------
 # Load table into DataFrame
-# -------------------------
-def load_table(table_type: str) -> pd.DataFrame:
-    """
-    Load a table (pickup/tipper/machinery) from Supabase
-    """
-    table_name = TABLES[table_type]
+# -------------------------------------------------
+def load_table(table_name: str) -> pd.DataFrame:
+    init_db()
     query = f"SELECT * FROM {table_name}"
-    df = pd.read_sql(query, engine)
-    return df
+    return pd.read_sql(query, engine)
 
-# -------------------------
-# Save DataFrame back to Supabase
-# -------------------------
-def save_table(df: pd.DataFrame, table_type: str):
-    """
-    Save a DataFrame back to Supabase
-    """
-    table_name = TABLES[table_type]
-    df.to_sql(table_name, engine, if_exists="replace", index=False)
+# -------------------------------------------------
+# Save DataFrame back to table (replace mode)
+# -------------------------------------------------
+def save_table(df: pd.DataFrame, table_name: str):
+    df.to_sql(
+        table_name,
+        engine,
+        if_exists="replace",
+        index=False
+    )
 
-# -------------------------
-# Initialize table from Excel (one-time use)
-# -------------------------
-def seed_from_excel(table_type: str, excel_file: str):
-    """
-    Upload an initial schedule from Excel
-    """
-    df = pd.read_excel(excel_file)
-    save_table(df, table_type)
+# -------------------------------------------------
+# Append rows (optional, safer for logs)
+# -------------------------------------------------
+def append_table(df: pd.DataFrame, table_name: str):
+    df.to_sql(
+        table_name,
+        engine,
+        if_exists="append",
+        index=False
+    )
 
+# -------------------------------------------------
+# Simple connection test (optional)
+# -------------------------------------------------
+def test_connection():
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
 
-    
