@@ -27,7 +27,7 @@ def init_db():
     with engine.begin() as conn:
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS pickup (
-                truck_id TEXT,
+                vehicle_id TEXT,
                 plate_no TEXT,
                 driver TEXT,
                 time_start TEXT,
