@@ -11,7 +11,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pytz
-import db  # your db.py with load_table / save_table functions
+import db  # your db.py with Supabase connection
 
 # -------------------------
 # PAGE CONFIG
@@ -33,122 +33,113 @@ now_str = now_dt.strftime("%H:%M")  # HH:MM string
 st.caption(f"🕒 Current Time (SG): **{now_str}**")
 
 # -------------------------
-# LOAD CURRENT DATA
-# -------------------------
-df = db.load_table("pickup")  # Load pickup lorry table
-
-if df.empty:
-    st.warning("No pickup lorry data found. Please upload schedule first.")
-    st.stop()
-
-# Normalize time columns (ensure strings)
-df["time_start"] = df["time_start"].astype(str).str.slice(0,5)
-df["time_end"] = df["time_end"].astype(str).str.slice(0,5)
-
-# -------------------------
 # 1️⃣ UPLOAD DAILY SCHEDULE (Excel)
 # -------------------------
 st.subheader("📤 Upload Today's Schedule (Excel)")
 
-uploaded_file = st.file_uploader(
-    "Select Excel file",
-    type=["xlsx"],
-    help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
-)
+with st.form("upload_schedule_form"):
+    uploaded_file = st.file_uploader(
+        "Select Excel file",
+        type=["xlsx"],
+        help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
+    )
+    upload_btn = st.form_submit_button("Upload Schedule")
 
-if uploaded_file is not None:
-    try:
-        # Read Excel
-        new_df = pd.read_excel(uploaded_file)
-
-        # Required columns
-        required_cols = [
-            "vehicle_id", "plate_no", "driver",
-            "time_start", "time_end",
-            "current_location", "status",
-            "remarks"
-        ]
-        missing_cols = [c for c in required_cols if c not in new_df.columns]
-        if missing_cols:
-            st.error(f"Missing columns in Excel: {missing_cols}")
+    if upload_btn:
+        if uploaded_file is None:
+            st.warning("Please select an Excel file first.")
         else:
-            # Normalize time columns
-            new_df["time_start"] = new_df["time_start"].astype(str).str.slice(0,5)
-            new_df["time_end"] = new_df["time_end"].astype(str).str.slice(0,5)
+            try:
+                new_df = pd.read_excel(uploaded_file)
 
-            # Add last_updated
-            new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
+                # Required columns
+                required_cols = [
+                    "vehicle_id", "plate_no", "driver",
+                    "time_start", "time_end",
+                    "current_location", "status",
+                    "remarks"
+                ]
+                missing_cols = [c for c in required_cols if c not in new_df.columns]
+                if missing_cols:
+                    st.error(f"Missing columns in Excel: {missing_cols}")
+                else:
+                    # Normalize times
+                    new_df["time_start"] = new_df["time_start"].astype(str).str.slice(0,5)
+                    new_df["time_end"] = new_df["time_end"].astype(str).str.slice(0,5)
+                    new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
-            # Save to DB
-            db.save_table(new_df, "pickup")
+                    # Save to DB
+                    db.save_table(new_df, "pickup")
+                    st.success("✅ Schedule uploaded and updated successfully!")
 
-            st.success("✅ Schedule uploaded and updated successfully!")
+            except Exception as e:
+                st.error(f"Failed to upload Excel: {e}")
 
-            # Reload
-            df = db.load_table("pickup")
+# -------------------------
+# LOAD CURRENT DATA
+# -------------------------
+df = db.load_table("pickup")
 
-    except Exception as e:
-        st.error(f"Failed to upload Excel: {e}")
+# Normalize times in case of previous inconsistencies
+df["time_start"] = df["time_start"].astype(str).str.slice(0,5)
+df["time_end"] = df["time_end"].astype(str).str.slice(0,5)
 
 # -------------------------
 # 2️⃣ DRIVER WHEREABOUT UPDATE
 # -------------------------
 st.subheader("📍 Driver Whereabout Update")
 
-vehicle_ids = df["vehicle_id"].unique()
-if len(vehicle_ids) == 0:
-    st.warning("No vehicles found in database.")
-    st.stop()
-
-vehicle = st.selectbox("Select Vehicle", vehicle_ids)
-
-vehicle_df = df[df["vehicle_id"] == vehicle].copy()
-
-# Find active slot or next
-active_slot = vehicle_df[
-    (vehicle_df["time_start"] <= now_str) &
-    (vehicle_df["time_end"] >= now_str)
-]
-
-if not active_slot.empty:
-    target_slot = active_slot.iloc[[0]]
-elif not vehicle_df.empty:
-    target_slot = vehicle_df.iloc[[0]]
+if df.empty:
+    st.warning("No schedule data available. Please upload first.")
 else:
-    st.warning(f"No schedule found for vehicle {vehicle}.")
-    st.stop()
+    vehicle = st.selectbox("Select Vehicle", df["vehicle_id"].unique())
 
-# Pre-fill form
-location_default = target_slot["current_location"].values[0]
-status_default = target_slot["status"].values[0]
-remarks_default = target_slot["remarks"].values[0]
+    vehicle_df = df[df["vehicle_id"] == vehicle].copy()
 
-with st.form("driver_update"):
-    location = st.text_input(
-        "Current Location / Site Code",
-        value=location_default,
-        placeholder="e.g. P201, P202, Dormitory, On road"
-    )
+    # Find active slot or next
+    active_slot = vehicle_df[
+        (vehicle_df["time_start"] <= now_str) &
+        (vehicle_df["time_end"] >= now_str)
+    ]
 
-    status = st.selectbox(
-        "Status",
-        ["Available", "Busy"],
-        index=0 if status_default == "Available" else 1
-    )
+    if active_slot.empty:
+        upcoming = vehicle_df[vehicle_df["time_start"] > now_str].sort_values("time_start")
+        target_slot = upcoming.iloc[[0]] if not upcoming.empty else vehicle_df.iloc[[0]]
+    else:
+        target_slot = active_slot
 
-    remarks = st.text_input("Remarks", value=remarks_default)
+    # Pre-fill form
+    location_default = target_slot["current_location"].values[0]
+    status_default = target_slot["status"].values[0]
+    remarks_default = target_slot["remarks"].values[0]
 
-    submit = st.form_submit_button("Update Whereabout")
+    with st.form("driver_update"):
+        location = st.text_input(
+            "Current Location / Site Code",
+            value=location_default,
+            placeholder="e.g. P201, P202, Dormitory, On road"
+        )
 
-if submit:
-    idx = target_slot.index
-    df.loc[idx, "current_location"] = location
-    df.loc[idx, "status"] = status
-    df.loc[idx, "remarks"] = remarks
-    df.loc[idx, "last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
+        status = st.selectbox(
+            "Status",
+            ["Available", "Busy"],
+            index=0 if status_default == "Available" else 1
+        )
 
-    db.save_table(df, "pickup")  # Save updated data
-    st.success("✅ Whereabout updated successfully!")
+        remarks = st.text_input("Remarks", value=remarks_default)
+
+        submit = st.form_submit_button("Update Whereabout")
+
+    if submit:
+        idx = target_slot.index
+        df.loc[idx, "current_location"] = location
+        df.loc[idx, "status"] = status
+        df.loc[idx, "remarks"] = remarks
+        df.loc[idx, "last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
+
+        db.save_table(df, "pickup")
+        df = db.load_table("pickup")  # reload updated data
+        st.success("✅ Whereabout updated successfully!")
 
 # -------------------------
 # 3️⃣ AVAILABLE NOW
