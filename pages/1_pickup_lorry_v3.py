@@ -109,6 +109,10 @@ df["time_end"] = df["time_end"].astype(str).str.slice(0,5)
 # -------------------------
 st.subheader("📍 Driver Whereabout Update")
 
+st.write(df.columns)
+st.write(df.head())
+
+
 vehicle = st.selectbox("Select Vehicle", df["vehicle_id"].unique())
 
 vehicle_df = df[df["vehicle_id"] == vehicle].copy()
