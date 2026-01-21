@@ -4,11 +4,14 @@
 # In[ ]:
 
 
+#!/usr/bin/env python
+# coding: utf-8
+
 import streamlit as st
 import pandas as pd
-import sqlite3
 from datetime import datetime
 import pytz
+import db  # your db.py with load_table / save_table functions
 
 # -------------------------
 # PAGE CONFIG
@@ -21,25 +24,6 @@ st.set_page_config(
 st.title("🚐 Pick-up Lorry Dashboard")
 
 # -------------------------
-# DATABASE PATH
-# -------------------------
-DB_PATH = "data/pickup.db"
-
-def get_conn():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
-
-def load_data():
-    conn = get_conn()
-    df = pd.read_sql("SELECT * FROM pickup_schedule", conn)
-    conn.close()
-    return df
-
-def save_data(df):
-    conn = get_conn()
-    df.to_sql("pickup_schedule", conn, if_exists="replace", index=False)
-    conn.close()
-
-# -------------------------
 # TIME (Singapore)
 # -------------------------
 SG_TZ = pytz.timezone("Asia/Singapore")
@@ -47,6 +31,19 @@ now_dt = datetime.now(SG_TZ)
 now_str = now_dt.strftime("%H:%M")  # HH:MM string
 
 st.caption(f"🕒 Current Time (SG): **{now_str}**")
+
+# -------------------------
+# LOAD CURRENT DATA
+# -------------------------
+df = db.load_table("pickup")  # Load pickup lorry table
+
+if df.empty:
+    st.warning("No pickup lorry data found. Please upload schedule first.")
+    st.stop()
+
+# Normalize time columns (ensure strings)
+df["time_start"] = df["time_start"].astype(str).str.slice(0,5)
+df["time_end"] = df["time_end"].astype(str).str.slice(0,5)
 
 # -------------------------
 # 1️⃣ UPLOAD DAILY SCHEDULE (Excel)
@@ -64,12 +61,12 @@ if uploaded_file is not None:
         # Read Excel
         new_df = pd.read_excel(uploaded_file)
 
-        # Ensure required columns exist
+        # Required columns
         required_cols = [
             "vehicle_id", "plate_no", "driver",
             "time_start", "time_end",
             "current_location", "status",
-            "remarks", "last_updated"
+            "remarks"
         ]
         missing_cols = [c for c in required_cols if c not in new_df.columns]
         if missing_cols:
@@ -82,38 +79,28 @@ if uploaded_file is not None:
             # Add last_updated
             new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
-            # Save to SQLite
-            save_data(new_df)
+            # Save to DB
+            db.save_table(new_df, "pickup")
 
             st.success("✅ Schedule uploaded and updated successfully!")
 
+            # Reload
+            df = db.load_table("pickup")
+
     except Exception as e:
         st.error(f"Failed to upload Excel: {e}")
-
-# -------------------------
-# LOAD CURRENT DATA
-# -------------------------
-# df = load_data()
-
-import db
-
-df = db.load_table("pickup")  # load pickup lorry schedule
-
-
-# Normalize times in case of previous inconsistencies
-df["time_start"] = df["time_start"].astype(str).str.slice(0,5)
-df["time_end"] = df["time_end"].astype(str).str.slice(0,5)
 
 # -------------------------
 # 2️⃣ DRIVER WHEREABOUT UPDATE
 # -------------------------
 st.subheader("📍 Driver Whereabout Update")
 
-st.write(df.columns)
-st.write(df.head())
+vehicle_ids = df["vehicle_id"].unique()
+if len(vehicle_ids) == 0:
+    st.warning("No vehicles found in database.")
+    st.stop()
 
-
-vehicle = st.selectbox("Select Vehicle", df["vehicle_id"].unique())
+vehicle = st.selectbox("Select Vehicle", vehicle_ids)
 
 vehicle_df = df[df["vehicle_id"] == vehicle].copy()
 
@@ -123,11 +110,13 @@ active_slot = vehicle_df[
     (vehicle_df["time_end"] >= now_str)
 ]
 
-if active_slot.empty:
-    upcoming = vehicle_df[vehicle_df["time_start"] > now_str].sort_values("time_start")
-    target_slot = upcoming.iloc[[0]] if not upcoming.empty else vehicle_df.iloc[[0]]
+if not active_slot.empty:
+    target_slot = active_slot.iloc[[0]]
+elif not vehicle_df.empty:
+    target_slot = vehicle_df.iloc[[0]]
 else:
-    target_slot = active_slot
+    st.warning(f"No schedule found for vehicle {vehicle}.")
+    st.stop()
 
 # Pre-fill form
 location_default = target_slot["current_location"].values[0]
@@ -158,11 +147,7 @@ if submit:
     df.loc[idx, "remarks"] = remarks
     df.loc[idx, "last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
-#     save_data(df)
-    db.save_table(df, "pickup")   # save updates back to Supabase
-
-    
-    df = load_data()  # reload updated data
+    db.save_table(df, "pickup")  # Save updated data
     st.success("✅ Whereabout updated successfully!")
 
 # -------------------------
