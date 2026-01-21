@@ -177,19 +177,21 @@ vehicle_filter = st.multiselect(
 
 filtered_df = df[df["vehicle_id"].isin(vehicle_filter)].copy()
 
-# Highlight active now
-filtered_df["active_now"] = filtered_df.apply(
-    lambda r: "✅ Active" if r["time_start"] <= now_str <= r["time_end"] else "",
-    axis=1
-)
-
-st.dataframe(
-    filtered_df.sort_values(["vehicle_id", "time_start"])[
-        ["vehicle_id", "plate_no", "driver",
-         "current_location", "status",
-         "time_start", "time_end",
-         "remarks", "last_updated", "active_now"]
-    ],
-    use_container_width=True
-)
+if not filtered_df.empty:
+    # Highlight active now
+    filtered_df["active_now"] = filtered_df.apply(
+        lambda r: "✅ Active" if r["time_start"] <= now_str <= r["time_end"] else "",
+        axis=1
+    )
+    st.dataframe(
+        filtered_df.sort_values(["vehicle_id", "time_start"])[
+            ["vehicle_id", "plate_no", "driver",
+             "current_location", "status",
+             "time_start", "time_end",
+             "remarks", "last_updated", "active_now"]
+        ],
+        use_container_width=True
+    )
+else:
+    st.warning("No schedule data available. Please upload first.")
 
