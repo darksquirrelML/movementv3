@@ -1,30 +1,24 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 
 # -------------------------------------------------
-# Database connection (Supabase Session Pooler)
+# Database connection (Supabase)
 # -------------------------------------------------
 DATABASE_URL = st.secrets["SUPABASE_DB_URL"]
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10
+    pool_pre_ping=True
 )
 
 # -------------------------------------------------
-# Initialise tables (safe to call always)
+# Initialise tables (safe to run every time)
 # -------------------------------------------------
 def init_db():
     with engine.begin() as conn:
+
+        # Pick-up Lorry
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS pickup (
                 vehicle_id TEXT,
@@ -39,6 +33,7 @@ def init_db():
             )
         """))
 
+        # Tipper Truck
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tipper (
                 truck_id TEXT,
@@ -51,6 +46,7 @@ def init_db():
             )
         """))
 
+        # Machinery
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS machinery (
                 machine_id TEXT,
@@ -64,41 +60,17 @@ def init_db():
         """))
 
 # -------------------------------------------------
-# Load table into DataFrame
+# Load table
 # -------------------------------------------------
 def load_table(table_name: str) -> pd.DataFrame:
     init_db()
     return pd.read_sql(f"SELECT * FROM {table_name}", engine)
 
 # -------------------------------------------------
-# Replace table (ADMIN / Excel upload only)
-# -------------------------------------------------
-def replace_table(df: pd.DataFrame, table_name: str):
-    df.to_sql(
-        table_name,
-        engine,
-        if_exists="replace",
-        index=False
-    )
-
-# -------------------------------------------------
-# Update table safely (normal operations)
+# Save table (replace)
 # -------------------------------------------------
 def save_table(df: pd.DataFrame, table_name: str):
-    with engine.begin() as conn:
-        conn.execute(text(f"DELETE FROM {table_name}"))
-        df.to_sql(table_name, conn, if_exists="append", index=False)
-
-# -------------------------------------------------
-# Append rows (logs / GPS history)
-# -------------------------------------------------
-def append_table(df: pd.DataFrame, table_name: str):
-    df.to_sql(
-        table_name,
-        engine,
-        if_exists="append",
-        index=False
-    )
+    df.to_sql(table_name, engine, if_exists="replace", index=False)
 
 # -------------------------------------------------
 # Connection test
@@ -106,4 +78,3 @@ def append_table(df: pd.DataFrame, table_name: str):
 def test_connection():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-
