@@ -27,7 +27,7 @@ if ENABLE_LOGIN:
         st.session_state.logged_in = False
 
 def login_required():
-    """Returns True if user successfully logged in"""
+#     """Returns True if user successfully logged in"""
     if not ENABLE_LOGIN:
         return True  # login disabled, always True
 
