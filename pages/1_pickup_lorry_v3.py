@@ -25,26 +25,30 @@ PASSWORD = "1234"         # <-- Set your password
 if ENABLE_LOGIN:
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
+    if "username_input" not in st.session_state:
+        st.session_state.username_input = ""
+    if "password_input" not in st.session_state:
+        st.session_state.password_input = ""
 
 def login_required():
-#     """Returns True if user successfully logged in"""
     if not ENABLE_LOGIN:
-        return True  # login disabled, always True
+        return True
 
     if st.session_state.logged_in:
         return True
 
     st.subheader("🔐 Login to upload schedule")
-    username_input = st.text_input("Username")
-    password_input = st.text_input("Password", type="password")
+    st.session_state.username_input = st.text_input("Username", st.session_state.username_input)
+    st.session_state.password_input = st.text_input("Password", st.session_state.password_input, type="password")
+
     if st.button("Login"):
-        if username_input == USERNAME and password_input == PASSWORD:
+        if st.session_state.username_input == USERNAME and st.session_state.password_input == PASSWORD:
             st.session_state.logged_in = True
             st.success("✅ Logged in successfully!")
         else:
             st.error("❌ Invalid username or password")
-    return False
 
+    return st.session_state.logged_in
 
 # =================================================
 # CONFIGURATION
@@ -88,19 +92,6 @@ if login_required():  # <-- Only allow upload if logged in
     if uploaded_file is None:
 #####################################################################################################################        
 
-
-# #         st.subheader("📤 Upload Today's Schedule (Excel)")
-
-#         with st.form("upload_schedule_form"):
-#             uploaded_file = st.file_uploader(
-#                 "Select Excel file",
-#                 type=["xlsx"],
-#                 help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
-#             )
-#             upload_btn = st.form_submit_button("Upload Schedule")
-
-#             if upload_btn:
-#                 if uploaded_file is None:
         st.warning("Please select an Excel file first.")
     else:
         try:
