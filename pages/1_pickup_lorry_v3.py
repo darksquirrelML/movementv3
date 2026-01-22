@@ -89,15 +89,15 @@ if login_required():  # <-- Only allow upload if logged in
 #####################################################################################################################        
 
 
-        st.subheader("📤 Upload Today's Schedule (Excel)")
+#         st.subheader("📤 Upload Today's Schedule (Excel)")
 
-        with st.form("upload_schedule_form"):
-            uploaded_file = st.file_uploader(
-                "Select Excel file",
-                type=["xlsx"],
-                help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
-            )
-            upload_btn = st.form_submit_button("Upload Schedule")
+#         with st.form("upload_schedule_form"):
+#             uploaded_file = st.file_uploader(
+#                 "Select Excel file",
+#                 type=["xlsx"],
+#                 help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
+#             )
+#             upload_btn = st.form_submit_button("Upload Schedule")
 
             if upload_btn:
                 if uploaded_file is None:
