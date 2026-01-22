@@ -46,7 +46,7 @@ def login_required():
 # =================================================
 # CONFIGURATION
 # =================================================
-PAGE_TITLE = "Pickup Lorry Schedule"
+PAGE_TITLE = "🚚 Pickup Lorry Schedule"
 TABLE_NAME = "pickup"   # change to: pickup / tipper / machinery
 
 # -------------------------
