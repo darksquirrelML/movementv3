@@ -42,18 +42,23 @@ def login_required_for_upload():
             st.error("❌ Invalid username or password")
 
     return False
-
+    
+# =================================================
+# CONFIGURATION
+# =================================================
+PAGE_TITLE = "🚛 Tipper Truck Schedule"
+TABLE_NAME = "tipper"   # change to: pickup / tipper / machinery
 
 # =================================================
 # PAGE CONFIG
 # =================================================
 st.set_page_config(
-    page_title="🚛 Tipper Truck Dashboard",
+    page_title=PAGE_TITLE,
     page_icon="🚛",
     layout="wide"
 )
 
-st.title("🚛 Tipper Truck Dashboard")
+st.title(PAGE_TITLE)
 
 # =================================================
 # TIME (Singapore)
