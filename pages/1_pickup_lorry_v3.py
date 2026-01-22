@@ -85,7 +85,7 @@ if login_required():  # <-- Only allow upload if logged in
         help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
     )
 
-    if uploaded_file is not None:
+    if uploaded_file is None:
 #####################################################################################################################        
 
 
