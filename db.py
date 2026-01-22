@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -78,3 +84,13 @@ def save_table(df: pd.DataFrame, table_name: str):
 def test_connection():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
+
+
+######### Below added for login ###########
+        
+def seed_from_excel(uploaded_file, table_name):
+    df = pd.read_excel(uploaded_file)
+    df.to_sql(table_name, engine, if_exists="replace", index=False)
+        
+        
+
