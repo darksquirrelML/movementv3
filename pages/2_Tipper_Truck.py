@@ -67,9 +67,10 @@ st.caption(f"🕒 Current Time (SG): **{now_str}**")
 # =================================================
 # 1️⃣ UPLOAD DAILY SCHEDULE (LOGIN REQUIRED)
 # =================================================
-st.subheader("📤 Upload Today's Schedule (Excel)")
+
 
 if login_required_for_upload():
+    st.subheader("📤 Upload Today's Schedule (Excel)")
     uploaded_file = st.file_uploader(
         "Select Excel file",
         type=["xlsx"],
