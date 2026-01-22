@@ -97,7 +97,7 @@ if login_required():  # <-- Only allow upload if logged in
 #                 type=["xlsx"],
 #                 help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
 #             )
-#             upload_btn = st.form_submit_button("Upload Schedule")
+            upload_btn = st.form_submit_button("Upload Schedule")
 
             if upload_btn:
                 if uploaded_file is None:
