@@ -89,9 +89,7 @@ def test_connection():
 ######### Below added for login ###########
         
 def seed_from_excel(uploaded_file, table_name: str):
-    """
-    Replace table data using uploaded Excel file
-    """
+    
     df = pd.read_excel(uploaded_file)
 
     df.to_sql(
