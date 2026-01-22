@@ -4,17 +4,12 @@
 # In[ ]:
 
 
-#!/usr/bin/env python
-# coding: utf-8
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pytz
 import db  # your db.py with Supabase connection
 
-
-#### Add Login Page #####
 # -------------------------
 # MODULAR LOGIN SETTINGS
 # -------------------------
@@ -22,29 +17,27 @@ ENABLE_LOGIN = True       # <-- Toggle True/False to enable login
 USERNAME = "admin"        # <-- Set your username
 PASSWORD = "1234"         # <-- Set your password
 
-if ENABLE_LOGIN:
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-    if "username_input" not in st.session_state:
-        st.session_state.username_input = ""
-    if "password_input" not in st.session_state:
-        st.session_state.password_input = ""
-
 def login_required():
+    """Returns True if user successfully logged in"""
     if not ENABLE_LOGIN:
         return True
+
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
 
     if st.session_state.logged_in:
         return True
 
     st.subheader("🔐 Login to upload schedule")
-    st.session_state.username_input = st.text_input("Username", st.session_state.username_input)
-    st.session_state.password_input = st.text_input("Password", st.session_state.password_input, type="password")
-
-    if st.button("Login"):
-        if st.session_state.username_input == USERNAME and st.session_state.password_input == PASSWORD:
+    username_input = st.text_input("Username")
+    password_input = st.text_input("Password", type="password")
+    login_clicked = st.button("Login")
+    
+    if login_clicked:
+        if username_input == USERNAME and password_input == PASSWORD:
             st.session_state.logged_in = True
             st.success("✅ Logged in successfully!")
+            st.experimental_rerun()  # <-- immediately rerun to show upload section
         else:
             st.error("❌ Invalid username or password")
 
@@ -72,14 +65,11 @@ st.title(PAGE_TITLE)
 SG_TZ = pytz.timezone("Asia/Singapore")
 now_dt = datetime.now(SG_TZ)
 now_str = now_dt.strftime("%H:%M")  # HH:MM string
-
 st.caption(f"🕒 Current Time (SG): **{now_str}**")
 
 # -------------------------
 # 1️⃣ UPLOAD DAILY SCHEDULE (Excel)
 # -------------------------
-
-##############################################################################################################
 if login_required():  # <-- Only allow upload if logged in
     st.subheader("📤 Upload Today's Schedule (Excel)")
 
@@ -89,11 +79,7 @@ if login_required():  # <-- Only allow upload if logged in
         help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
     )
 
-    if uploaded_file is None:
-#####################################################################################################################        
-
-        st.warning("Please select an Excel file first.")
-    else:
+    if uploaded_file is not None:
         try:
             new_df = pd.read_excel(uploaded_file)
 
@@ -114,7 +100,7 @@ if login_required():  # <-- Only allow upload if logged in
                 new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
                 # Save to DB
-                db.save_table(new_df, "pickup")
+                db.save_table(new_df, TABLE_NAME)
                 st.success("✅ Schedule uploaded and updated successfully!")
 
         except Exception as e:
@@ -123,7 +109,7 @@ if login_required():  # <-- Only allow upload if logged in
 # -------------------------
 # LOAD CURRENT DATA
 # -------------------------
-df = db.load_table("pickup")
+df = db.load_table(TABLE_NAME)
 
 # Normalize times in case of previous inconsistencies
 df["time_start"] = df["time_start"].astype(str).str.slice(0,5)
@@ -138,7 +124,6 @@ if df.empty:
     st.warning("No schedule data available. Please upload first.")
 else:
     vehicle = st.selectbox("Select Vehicle", df["vehicle_id"].unique())
-
     vehicle_df = df[df["vehicle_id"] == vehicle].copy()
 
     # Find active slot or next
@@ -146,7 +131,6 @@ else:
         (vehicle_df["time_start"] <= now_str) &
         (vehicle_df["time_end"] >= now_str)
     ]
-
     if active_slot.empty:
         upcoming = vehicle_df[vehicle_df["time_start"] > now_str].sort_values("time_start")
         target_slot = upcoming.iloc[[0]] if not upcoming.empty else vehicle_df.iloc[[0]]
@@ -182,21 +166,19 @@ else:
         df.loc[idx, "remarks"] = remarks
         df.loc[idx, "last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
-        db.save_table(df, "pickup")
-        df = db.load_table("pickup")  # reload updated data
+        db.save_table(df, TABLE_NAME)
+        df = db.load_table(TABLE_NAME)  # reload updated data
         st.success("✅ Whereabout updated successfully!")
 
 # -------------------------
 # 3️⃣ AVAILABLE NOW
 # -------------------------
 st.subheader("🟢 Available Now")
-
 available_now = df[
     (df["status"] == "Available") &
     (df["time_start"] <= now_str) &
     (df["time_end"] >= now_str)
 ]
-
 if available_now.empty:
     st.warning("No pick-up lorry available now.")
 else:
@@ -213,17 +195,13 @@ else:
 # 4️⃣ TODAY'S SCHEDULE
 # -------------------------
 st.subheader("📅 Today's Pick-up Lorry Schedule")
-
 vehicle_filter = st.multiselect(
     "Filter by Vehicle",
     df["vehicle_id"].unique(),
     default=df["vehicle_id"].unique()
 )
-
 filtered_df = df[df["vehicle_id"].isin(vehicle_filter)].copy()
-
 if not filtered_df.empty:
-    # Highlight active now
     filtered_df["active_now"] = filtered_df.apply(
         lambda r: "✅ Active" if r["time_start"] <= now_str <= r["time_end"] else "",
         axis=1
