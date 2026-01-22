@@ -89,45 +89,45 @@ if login_required():  # <-- Only allow upload if logged in
 #####################################################################################################################        
 
 
-#         st.subheader("📤 Upload Today's Schedule (Excel)")
+# #         st.subheader("📤 Upload Today's Schedule (Excel)")
 
-        with st.form("upload_schedule_form"):
-            uploaded_file = st.file_uploader(
-                "Select Excel file",
-                type=["xlsx"],
-                help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
-            )
-            upload_btn = st.form_submit_button("Upload Schedule")
+#         with st.form("upload_schedule_form"):
+#             uploaded_file = st.file_uploader(
+#                 "Select Excel file",
+#                 type=["xlsx"],
+#                 help="Columns must include: vehicle_id, plate_no, driver, time_start, time_end, current_location, status, remarks"
+#             )
+#             upload_btn = st.form_submit_button("Upload Schedule")
 
-            if upload_btn:
-                if uploaded_file is None:
-                    st.warning("Please select an Excel file first.")
-                else:
-                    try:
-                        new_df = pd.read_excel(uploaded_file)
+#             if upload_btn:
+#                 if uploaded_file is None:
+        st.warning("Please select an Excel file first.")
+    else:
+        try:
+            new_df = pd.read_excel(uploaded_file)
 
-                        # Required columns
-                        required_cols = [
-                            "vehicle_id", "plate_no", "driver",
-                            "time_start", "time_end",
-                            "current_location", "status",
-                            "remarks"
-                        ]
-                        missing_cols = [c for c in required_cols if c not in new_df.columns]
-                        if missing_cols:
-                            st.error(f"Missing columns in Excel: {missing_cols}")
-                        else:
-                            # Normalize times
-                            new_df["time_start"] = new_df["time_start"].astype(str).str.slice(0,5)
-                            new_df["time_end"] = new_df["time_end"].astype(str).str.slice(0,5)
-                            new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
+            # Required columns
+            required_cols = [
+                "vehicle_id", "plate_no", "driver",
+                "time_start", "time_end",
+                "current_location", "status",
+                "remarks"
+            ]
+            missing_cols = [c for c in required_cols if c not in new_df.columns]
+            if missing_cols:
+                st.error(f"Missing columns in Excel: {missing_cols}")
+            else:
+                # Normalize times
+                new_df["time_start"] = new_df["time_start"].astype(str).str.slice(0,5)
+                new_df["time_end"] = new_df["time_end"].astype(str).str.slice(0,5)
+                new_df["last_updated"] = now_dt.strftime("%Y-%m-%d %H:%M")
 
-                            # Save to DB
-                            db.save_table(new_df, "pickup")
-                            st.success("✅ Schedule uploaded and updated successfully!")
+                # Save to DB
+                db.save_table(new_df, "pickup")
+                st.success("✅ Schedule uploaded and updated successfully!")
 
-                    except Exception as e:
-                        st.error(f"Failed to upload Excel: {e}")
+        except Exception as e:
+            st.error(f"Failed to upload Excel: {e}")
 
 # -------------------------
 # LOAD CURRENT DATA
