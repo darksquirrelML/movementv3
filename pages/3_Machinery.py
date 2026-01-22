@@ -28,7 +28,7 @@ TABLE_NAME = "machinery"   # change to: pickup / tipper / machinery
 # PAGE CONFIG
 # -------------------------
 st.set_page_config(
-    page_title=PAGE_TITLE",
+    page_title=PAGE_TITLE,
     page_icon="🏗️",
     layout="wide"
 )
