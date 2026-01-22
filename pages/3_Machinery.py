@@ -41,18 +41,23 @@ def login_for_upload():
             st.error("❌ Invalid username or password")
 
     return False
-
+    
+# =================================================
+# CONFIGURATION
+# =================================================
+PAGE_TITLE = "🏗️ Machinery Schedule"
+TABLE_NAME = "machinery"   # change to: pickup / tipper / machinery
 
 # -------------------------
 # PAGE CONFIG
 # -------------------------
 st.set_page_config(
-    page_title="🏗️ Machinery Dashboard",
+    page_title=PAGE_TITLE,
     page_icon="🏗️",
     layout="wide"
 )
 
-st.title("🏗️ Machinery Dashboard")
+st.title(PAGE_TITLE)
 
 # -------------------------
 # TIME (Singapore)
