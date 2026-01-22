@@ -37,7 +37,7 @@ def login_required():
         if username_input == USERNAME and password_input == PASSWORD:
             st.session_state.logged_in = True
             st.success("✅ Logged in successfully!")
-            st.experimental_rerun()  # <-- immediately rerun to show upload section
+            st.rerun()  # <-- immediately rerun to show upload section
         else:
             st.error("❌ Invalid username or password")
 
