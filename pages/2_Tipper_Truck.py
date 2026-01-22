@@ -13,16 +13,26 @@ from datetime import datetime
 import pytz
 from db import load_table, save_table
 
+
+
+# =================================================
+# CONFIGURATION
+# =================================================
+PAGE_TITLE = "🚛 Tipper Truck Dashboard"
+TABLE_NAME = "tipper"   # change to: pickup / tipper / machinery
+
+
+
 # -------------------------
 # PAGE CONFIG
 # -------------------------
 st.set_page_config(
-    page_title="🚛 Tipper Truck Dashboard",
+    page_title=PAGE_TITLE,
     page_icon="🚛",
     layout="wide"
 )
 
-st.title("🚛 Tipper Truck Dashboard")
+st.title(PAGE_TITLE)
 
 # -------------------------
 # TIME (Singapore)
