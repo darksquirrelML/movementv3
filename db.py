@@ -75,8 +75,17 @@ def load_table(table_name: str) -> pd.DataFrame:
 # -------------------------------------------------
 # Save table (replace)
 # -------------------------------------------------
+
+#########################################################################################
+# def save_table(df: pd.DataFrame, table_name: str):
+#     df.to_sql(table_name, engine, if_exists="replace", index=False)
+
+# Change to append
 def save_table(df: pd.DataFrame, table_name: str):
-    df.to_sql(table_name, engine, if_exists="replace", index=False)
+    with engine.begin() as conn:
+        conn.execute(text(f"DELETE FROM {table_name} WHERE 1=1"))
+    df.to_sql(table_name, engine, if_exists="append", index=False)
+#############################################################################################
 
 # -------------------------------------------------
 # Connection test
