@@ -1,7 +1,7 @@
-streamlit
-pandas
-openpyxl
-pytz
-sqlalchemy
-psycopg2-binary
-psycopg[binary]
+streamlit==1.64.0
+pandas==3.0.6
+openpyxl==3.1.5
+pytz==2026.4
+sqlalchemy==2.1.1
+psycopg2-binary==2.9.13
+psycopg[binary]==3.3.6
